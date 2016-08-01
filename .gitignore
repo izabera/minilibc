@@ -1,0 +1,4 @@
+minilibc
+*.o
+*.so
+*.a
