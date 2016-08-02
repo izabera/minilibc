@@ -7,6 +7,10 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
+#include <errno.h>
+#include <limits.h>
+#include <time.h>
+#include <stdio.h>
 
 /*#include <linux/memfd.h>*/
 #define MFD_CLOEXEC   0x0001U
@@ -139,7 +143,7 @@ size_t strnlen(const char *s, size_t n) {
 }
 
 typedef struct {
-  char buf[4096];
+  char buf[BUFSIZ];
   char **ptr;
   size_t *size, used, pos;
   mode_t mode;
@@ -155,7 +159,7 @@ file _my_stdin  = { .fd = 0, .bufmode = 'f' },
      *my_stdout = &_my_stdout,
      *my_stdin  = &_my_stdin ,
      *my_stderr = &_my_stderr;
-#define EOF -1
+/*#define EOF -1*/
 
 file *my_open_memstream(char **ptr, size_t *size) {
   file *f = malloc(sizeof(*f)); // malloc never fails!(tm)
@@ -167,12 +171,6 @@ file *my_open_memstream(char **ptr, size_t *size) {
   return f;
 }
 
-file *my_tmpnam() {
-  file *f = malloc(sizeof(*f));
-  f->bufmode = 'f';
-  f->fd = syscall(__NR_memfd_create, "tmp", 0);
-  return f;
-}
 int my_fflush(file *f) {
   f->unget[0] = 0;
   if (f->used) {
@@ -226,6 +224,7 @@ file *my_fopen(const char *path, const char *mode) {
   int fd = open(path, flags, 0666);
   if (fd == -1) return NULL;
   file *f = malloc(sizeof(*f));
+  f->bufmode = isatty(fd) ? 'l' : 'f';
   f->fd = fd;
   f->mode = flags;
   return f;
@@ -234,6 +233,7 @@ file *my_fopen(const char *path, const char *mode) {
 file *my_fdopen(int fd, const char *mode) {
   (void) mode;
   file *f = malloc(sizeof(*f));
+  f->bufmode = isatty(fd) ? 'l' : 'f';
   f->fd = fd;
   return f;
 }
@@ -243,6 +243,7 @@ file *my_freopen(const char *path, const char *mode, file *f) {
   int fd = open(path, flags, 0666);
   if (fd == -1) return NULL;
   close(f->fd);
+  f->bufmode = isatty(fd) ? 'l' : 'f';
   f->fd = fd;
   f->mode = flags;
   return f;
@@ -322,7 +323,7 @@ int my_ungetc(int c, file *f) {
 char *my_fgets(char *s, int size, file *f) {
   char *ret = s;
   int c;
-  for (size_t i = 0; i < size - 1; i++) {
+  for (size_t i = 0; i < (size_t) size - 1; i++) {
     if ((c = my_fgetc(f)) == EOF || c == '\n') break;
     *s++ = c;
   }
@@ -336,10 +337,27 @@ long my_ftell(file *f) {
   return lseek(f->fd, 0, SEEK_CUR);
 }
 
+// musl does this
+void my_setbuf(file *f, char *buf) { (void) f; (void) buf; }
+void my_setbuffer(file *f, char *buf, size_t size) { (void) f; (void) size; (void) buf; }
+void my_setlinebuf(file *f) { f->bufmode = 'l'; }
+
+int my_setvbuf(file *f, char *buf, int mode, size_t size) {
+  (void) buf;
+  (void) size;
+  if (mode == _IONBF) f->bufmode = 'n';
+  else if (mode == _IOLBF) f->bufmode = 'l';
+  else return -1;
+  return 0;
+}
+
+struct timespec ts;
 __attribute__((constructor)) void my_setupstreams() {
   if (isatty(0)) _my_stdin .bufmode = 'n';
   if (isatty(1)) _my_stdout.bufmode = 'l';
   if (isatty(2)) _my_stderr.bufmode = 'n';
+  clock_gettime(CLOCK_REALTIME, &ts);
+  srand(ts.tv_nsec);
 }
 
 __attribute__((destructor)) void my_clearstreams() {
@@ -347,6 +365,57 @@ __attribute__((destructor)) void my_clearstreams() {
   if (isatty(my_stderr->fd)) my_fflush(my_stderr);
 }
 
+int my_mkostemps(char *template, int len, int flags) {
+  size_t suff = strlen(template) - len - 6;
+  if (strncmp(template+suff, "XXXXXX", 6)) return -1;
+  int fd;
+  flags -= flags & O_ACCMODE;
+  for (int q = 0; q < 100; q++) {
+    for (int i = 0; i < 6; i++)
+      template[suff+i] = "qwertyuiopasdfghjklzxcvbnm"
+                         "QWERTYUIOPASDFGHJKLZXCVBNM" "1234567890" [rand() % 62];
+    if ((fd = open(template, flags | O_RDWR | O_CREAT | O_EXCL, 0600)) != -1) return fd;
+    if (errno != EEXIST) break;
+  }
+  return -1;
+}
+
+int my_mkstemp(char *template) { return my_mkostemps(template, 0, 0); }
+int my_mkstemps(char *template, int len) { return my_mkostemps(template, len, 0); }
+int my_mkostemp(char *template, int flags) { return my_mkostemps(template, 0, flags); }
+
+char *my_mktemp(char *template) {
+  int fd;
+  if ((fd = my_mkstemp(template)) == -1) return NULL;
+  close(fd);
+  unlink(template);
+  return template;
+}
+
+char *my_tempnam(const char *dir, const char *pfx) {
+  char *template = malloc(PATH_MAX);
+  snprintf(template, PATH_MAX, "%s/%sXXXXXX", dir, pfx);
+  return my_mktemp(template);
+}
+
+file *my_tmpfile(void) {
+  file *f = calloc(1, sizeof(*f));
+  f->fd = syscall(__NR_memfd_create, "tmp", 0);
+  f->bufmode = 'f';
+  f->mode = strtomode("r+");
+  return f;
+}
+
+char *my_tmpnam(char *s) {
+  static char buf[PATH_MAX] = "/tmp/XXXXXX";
+  char *template = s;
+  if (s) my_memmove(s, buf, strlen(buf)+1);
+  else template = buf;
+  int fd;
+  if ((fd = my_mkstemp(template)) == -1) return NULL;
+  close(fd);
+  return template;
+}
 
 int main() {
   /*int c = my_getchar();*/
@@ -362,7 +431,15 @@ int main() {
   /*my_fclose(f);*/
   /*my_puts("helloooo");*/
   /*my_puts(ptr);*/
-  char buf[20];
-  my_puts(my_fgets(buf, sizeof(buf), my_stdin));
+  /*char buf[20];*/
+  /*my_puts(my_fgets(buf, sizeof(buf), my_stdin));*/
+  /*my_puts(my_tempnam("/tmp", "lol"));*/
+  /*file *f = my_tmpfile();*/
+  /*my_fputs("hello\n", f);*/
+  /*my_fflush(f);*/
+  /*char path[PATH_MAX];*/
+  /*snprintf(path, PATH_MAX, "/proc/self/fd/%d", f->fd);*/
+  /*linkat(AT_FDCWD, path, AT_FDCWD, "/tmp/file", AT_SYMLINK_FOLLOW);*/
+  /*my_puts(my_tmpnam(path));*/
   return 0;
 }
