@@ -12,7 +12,7 @@ y fgets
 y fileno
 y fopen
   fprintf
-  fpurge
+y fpurge
 y fputc
 y fputs
 y fread
@@ -33,7 +33,7 @@ y putc
 y putchar
 y puts
   putw
-  remove
+y remove
 y rewind
   scanf
 y setbuf
@@ -73,7 +73,7 @@ y strcmp
   strcoll
   strcoll_l
 y strcpy
-  strcspn
+y strcspn
 y strdup
   strerror
   strerror_l
@@ -84,11 +84,11 @@ y strncmp
 y strncpy
 y strndup
 y strnlen
-  strpbrk
+y strpbrk
 y strrchr
   strsignal
-  strspn
-  strstr
+y strspn
+y strstr
   strtok
   strtok_r
   strxfrm

@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <time.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 /*#include <linux/memfd.h>*/
 #define MFD_CLOEXEC   0x0001U
@@ -33,7 +35,7 @@ __attribute__((destructor)) void my_clearstreams() {
   if (isatty(my_stderr->fd)) my_fflush(my_stderr);
 }
 
-int main(int argc, char *argv[]) {
+int main() {
   /*int c = my_getchar();*/
   /*my_putchar('<');*/
   /*my_putchar(c);*/
@@ -57,9 +59,18 @@ int main(int argc, char *argv[]) {
   /*snprintf(path, PATH_MAX, "/proc/self/fd/%d", f->fd);*/
   /*linkat(AT_FDCWD, path, AT_FDCWD, "/tmp/file", AT_SYMLINK_FOLLOW);*/
   /*my_puts(my_tmpnam(path));*/
-  while (--argc) {
-    my_puts(*++argv);
-    my_remove(*argv);
-  }
+  char *ptr;
+  /*ptr = my_strcasestr("helloworldwow", "Orld");*/
+  /*printf("%s\n", ptr ? ptr : "(null)");*/
+  /*ptr = my_strstr("helloworldwow", "hello");*/
+  /*printf("%s\n", ptr ? ptr : "(null)");*/
+  /*ptr = my_strstr("helloworldwow", "helo");*/
+  /*printf("%s\n", ptr ? ptr : "(null)");*/
+  /*ptr = my_strstr("helloworldwow", "elloworldw");*/
+  ptr = my_strstr("abcdefghijklmnopqrstuvwxyz", "ropq");
+  printf("%s\n", ptr ? ptr : "(null)");
+  puts("----");
+  ptr = my_strstr("abcdefghijklmnopqrstuvwxyz", "opqr");
+  printf("%s\n", ptr ? ptr : "(null)");
   return 0;
 }

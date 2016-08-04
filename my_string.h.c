@@ -32,7 +32,7 @@ void *my_rawmemchr(const void *s, int c) {
 int my_memcmp(const void *s1, const void *s2, size_t n) {
   const char *p1 = s1, *p2 = s2;
   while (*p1 == *p2 && n--) p1++, p2++;
-  return *p1 - *p2;
+  return n ? *p1 - *p2 : 0;
 }
 
 void *my_memcpy(void *dest, const void *src, size_t n) {
@@ -55,7 +55,7 @@ void *my_memset(void *s, int c, size_t n) {
   return s;
 }
 
-char *my_stpcpy(char *dest, const char *src, size_t n) {
+char *my_stpncpy(char *dest, const char *src, size_t n) {
   while (n-- && (*dest++ = *src++));
   return dest;
 }
@@ -129,9 +129,23 @@ int my_strcmp(const char *s1, const char *s2) {
   return *s1 - *s2;
 }
 
+int my_strcasecmp(const char *s1, const char *s2) {
+  while (*s1 &&
+      (*s1 | (*s1 >= 'A' && *s1 <= 'Z' ? 32 : 0)) ==
+      (*s2 | (*s2 >= 'A' && *s2 <= 'Z' ? 32 : 0))      ) s1++, s2++;
+  return *s1 - *s2;
+}
+
 int my_strncmp(const char *s1, const char *s2, size_t n) {
   while (*s1 && *s1 == *s2 && n--) s1++, s2++;
-  return *s1 - *s2;
+  return n ? *s1 - *s2 : 0;
+}
+
+int my_strncasecmp(const char *s1, const char *s2, size_t n) {
+  while (*s1 &&
+      (*s1 | (*s1 >= 'A' && *s1 <= 'Z' ? 32 : 0)) ==
+      (*s2 | (*s2 >= 'A' && *s2 <= 'Z' ? 32 : 0))       && n--) s1++, s2++;
+  return n ? *s1 - *s2 : 0;
 }
 
 size_t my_strnlen(const char *s, size_t n) {
@@ -153,4 +167,61 @@ char *my_strndup(const char *s, size_t n) {
   char *ret = malloc(len);
   ret[len-1] = 0;
   return my_memcpy(ret, s, len-1);
+}
+
+char *my_strstr(const char *h, const char *n) {
+  if (!n[0]) return (char *)h;
+  h = my_strchr(h, *n);
+  if (!h || !n[1]) return (char *)h;
+
+  size_t hl = strlen(h), nl = strlen(n);
+  for (size_t i = 0; i < hl - nl; i++) if (!my_strncmp(h+i, n, nl)) return (char *)h+i;
+
+  return NULL;
+}
+
+char *my_strcasestr(const char *h, const char *n) {
+  if (!n[0]) return (char *)h;
+  if (!n[1]) {
+    char c1 = *n, c2 = (*n >= 'a' && *n <= 'z') || (*n >= 'A' && *n <= 'Z') ? *n ^ 32 : *n;
+    char *a = my_strchr(h, c1), *b = my_strchr(h, c2);
+    if (a && !b) return a;
+    if (!a && b) return b;
+    if (!a && !b) return NULL;
+    return a < b ? a : b;
+  }
+  size_t hl = strlen(h), nl = strlen(n);
+  for (size_t i = 0; i < hl - nl; i++) if (!my_strncasecmp(h+i, n, nl)) return (char *)h+i;
+  return NULL;
+}
+
+#define checkbit(mask, byte) (mask[(unsigned char)byte/8] &  1 << (unsigned char)byte % 8)
+#define   setbit(mask, byte) (mask[(unsigned char)byte/8] |= 1 << (unsigned char)byte % 8)
+size_t strspn(const char *s, const char *accept) {
+  size_t i, slen = my_strlen(s), acceptlen = my_strlen(accept);
+  if (slen == 0 || acceptlen == 0) return 0;
+
+  char mask[32] = { 0 };
+  for (i = 0; i < acceptlen; i++) setbit(mask, accept[i]);
+  for (i = 0; i < slen && checkbit(mask, s[i]); i++);
+
+  return i;
+}
+
+size_t my_strcspn(const char *s, const char *accept) {
+  size_t i, slen = my_strlen(s), acceptlen = my_strlen(accept);
+  if (slen == 0 || acceptlen == 0) return slen;
+
+  char mask[32] = { 0 };
+  for (i = 0; i < acceptlen; i++) setbit(mask, accept[i]);
+  for (i = 0; i < slen && !checkbit(mask, s[i]); i++);
+
+  return i;
+}
+#undef checkbit
+#undef setbit
+
+char *my_strpbrk(const char *s, const char *accept) {
+	s += my_strcspn(s, accept);
+	return *s ? (char *)s : NULL;
 }
