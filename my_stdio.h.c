@@ -1,13 +1,6 @@
-typedef struct {
-  char buf[BUFSIZ];
-  char **ptr;
-  size_t *size, used, pos;
-  mode_t mode;
-  char bufmode, // 'l' line 'f' fully 'n' no
-       error,   // 0 fine 'e' eof 'u' unknown
-       unget[2]; // [0] == is there a char?    [1] == actual char
-  int fd;
-} file;
+#include "my_random.h"
+#include "my_stdio.h"
+#include "prototypes.h"
 
 file _my_stdin  = { .fd = 0, .bufmode = 'f' },
      _my_stdout = { .fd = 1, .bufmode = 'f' },
@@ -65,7 +58,7 @@ int my_fclose(file *f) {
 
 int my_fileno(file *f) { return f->fd; }
 
-mode_t strtomode(const char *mode) {
+static mode_t strtomode(const char *mode) {
   if (!my_strcmp("r" , mode)) return O_RDONLY;
   if (!my_strcmp("r+", mode)) return O_RDWR;
   if (!my_strcmp("w" , mode)) return O_CREAT | O_TRUNC | O_WRONLY;

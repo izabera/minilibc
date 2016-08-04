@@ -12,6 +12,6 @@ LDFLAGS = -Wl,--gc-sections -s
 
 all: minilibc
 
-minilibc: minilibc.c my_stdio.h.c my_string.h.c
+minilibc: minilibc.c my_*.c
 	$(CC) $(CFLAGS) -c minilibc.c -o minilibc.o
 	$(CC) $(LDFLAGS) minilibc.o -o minilibc

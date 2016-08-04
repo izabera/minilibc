@@ -93,3 +93,23 @@ y strstr
   strtok_r
   strxfrm
   strxfrm_l
+
+
+ctype.h
+
+y isalnum(int);
+y isalpha(int);
+y isascii(int);
+y isblank(int);
+y iscntrl(int);
+y isdigit(int);
+y isgraph(int);
+y islower(int);
+y isprint(int);
+y ispunct(int);
+y isspace(int);
+y isupper(int);
+y isxdigit(int);
+y toascii(int);
+y tolower(int);
+y toupper(int);

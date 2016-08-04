@@ -1,3 +1,6 @@
+#include "my_random.h"
+#include "prototypes.h"
+
 void *my_memccpy(void *dest, const void *src, int c, size_t n) {
   char *p1 = dest;
   const char *p2 = src;
@@ -197,7 +200,7 @@ char *my_strcasestr(const char *h, const char *n) {
 
 #define checkbit(mask, byte) (mask[(unsigned char)byte/8] &  1 << (unsigned char)byte % 8)
 #define   setbit(mask, byte) (mask[(unsigned char)byte/8] |= 1 << (unsigned char)byte % 8)
-size_t strspn(const char *s, const char *accept) {
+size_t my_strspn(const char *s, const char *accept) {
   size_t i, slen = my_strlen(s), acceptlen = my_strlen(accept);
   if (slen == 0 || acceptlen == 0) return 0;
 
@@ -224,4 +227,20 @@ size_t my_strcspn(const char *s, const char *accept) {
 char *my_strpbrk(const char *s, const char *accept) {
 	s += my_strcspn(s, accept);
 	return *s ? (char *)s : NULL;
+}
+
+void *my_memfrob(void *s, size_t n) {
+  for (char *p = s; n; n--) *p++ ^= 42;
+  return s;
+}
+
+char *my_strfry(char *s) { // glibc uses the naive swap??? BOOOOOOOOO
+  size_t len = my_strlen(s), rnum;
+  for (size_t i = len - 1; i > 0; i--) {
+    rnum = pcg32_random_r(&__randnum) % (i + 1);
+    char c = s[rnum];
+    s[rnum] = s[i];
+    s[i] = c;
+  }
+  return s;
 }
