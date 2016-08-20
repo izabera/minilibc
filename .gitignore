@@ -1,4 +1,5 @@
 minilibc
+prototypes.h
 *.o
 *.so
 *.a

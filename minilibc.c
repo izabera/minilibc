@@ -22,10 +22,13 @@
 #include "my_stdio.h.c"
 #include "my_constructor.c"
 #include "my_string.h.c"
+#include "my_stdlib.h.c"
 #include "my_ctype.h.c"
 #include "my_random.h.c"
 #include "my_destructor.c"
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc == 1) return 1;
+  /*printf("%ld\n", my_strtol(argv[1], NULL, 0));*/
   return 0;
 }
