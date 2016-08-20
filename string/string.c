@@ -256,3 +256,28 @@ char *strfry(char *s) { // glibc uses the naive swap??? BOOOOOOOOO
   }
   return s;
 }
+
+size_t strlcat(char *dest, const char *src, size_t size) {
+  size_t ret;
+  for (ret = 0; ret < size && dest[ret]; ret++);
+  if (ret == size) return ret + strlen(src);
+  for (; ret < size-1 && *src; ret++) dest[ret] = *src++;
+  dest[ret] = 0;
+  return ret + strlen(src);
+}
+
+size_t strlcpy(char *dest, const char *src, size_t size) {
+  size_t ret;
+  for (ret = 0; ret < size-1 && *src; ret++) dest[ret] = *src++;
+  dest[ret] = 0;
+  return ret;
+}
+
+int strverscmp(const char *s1, const char *s2) {
+  while (*s1 && *s1 == *s2) s1++, s2++;
+  if (!*s1 && !*s2) return 0;
+  if (!*s1) return -1;
+  if (!*s2) return 1;
+  if (isdigit(*s1) && isdigit(*s2)) return strtoul(s1, NULL, 10) - strtoul(s2, NULL, 10);
+  return strcmp(s1, s2);
+}
