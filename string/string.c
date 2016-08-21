@@ -281,3 +281,26 @@ int strverscmp(const char *s1, const char *s2) {
   if (isdigit(*s1) && isdigit(*s2)) return strtoul(s1, NULL, 10) - strtoul(s2, NULL, 10);
   return strcmp(s1, s2);
 }
+
+void explicit_bzero(void *buf, size_t len) {
+  volatile char *b = buf;
+  for (size_t i = 0; i < len; i++) b[i] = 0;
+}
+
+void bzero(void *buf, size_t len) {
+  char *b = buf;
+  for (size_t i = 0; i < len; i++) b[i] = 0;
+}
+
+void bcopy(const void *src, void *dest, size_t n) {
+  memmove(dest, src, n);
+}
+
+int bcmp(const void *, const void *, size_t) __attribute__((weak, alias("memcmp")));
+int index(const char *, int) __attribute__((weak, alias("strchr")));
+int rindex(const char *, int) __attribute__((weak, alias("strrchr")));
+
+void swab(const void *restrict from, void *restrict to, ssize_t n) {
+  uint16_t *src = (void *)from, *dest = to;
+  for (ssize_t i = n; i>1; i-=2, src++) *dest++ = *src << 8 | *src >> 8;
+}
